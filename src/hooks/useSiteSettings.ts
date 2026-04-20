@@ -28,7 +28,7 @@ export function useSiteSettings() {
 
   useEffect(() => {
     const ch = supabase
-      .channel("site_settings_realtime")
+      .channel(`site_settings_realtime_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "site_settings" },
