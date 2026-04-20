@@ -22,7 +22,7 @@ export function ResponsesTable() {
 
 
   const people = useMemo(
-    () => [...new Set(responses.map((r) => r.person_name))].sort(),
+    () => [...new Set(responses.map((r) => r.person_name))].filter((n) => n !== "admin123").sort(),
     [responses]
   );
 

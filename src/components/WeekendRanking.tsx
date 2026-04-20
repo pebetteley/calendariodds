@@ -57,7 +57,7 @@ export function WeekendRanking() {
   }, [settings]);
 
   const people = useMemo(
-    () => [...new Set(responses.map((r) => r.person_name))],
+    () => [...new Set(responses.map((r) => r.person_name))].filter((n) => n !== "admin123"),
     [responses]
   );
 

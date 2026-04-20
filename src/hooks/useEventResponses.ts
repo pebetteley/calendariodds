@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, type EventResponse } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+import type { EventResponse } from "@/lib/supabase";
 
 export function useEventResponses() {
   return useQuery<EventResponse[]>({
@@ -43,15 +44,13 @@ export function useToggleWeekendBlock() {
   return useMutation({
     mutationFn: async ({ name, dates, isUnavailable }: { name: string; dates: string[]; isUnavailable: boolean }) => {
       if (isUnavailable) {
-        // Remove all dates in the block
-        for (const date of dates) {
-          const { error } = await supabase
-            .from("event_responses")
-            .delete()
-            .eq("person_name", name)
-            .eq("unavailable_date", date);
-          if (error) throw error;
-        }
+        // Remove all dates in the block in a single query
+        const { error } = await supabase
+          .from("event_responses")
+          .delete()
+          .eq("person_name", name)
+          .in("unavailable_date", dates);
+        if (error) throw error;
       } else {
         // Insert all dates in the block
         const rows = dates.map((d) => ({ person_name: name, unavailable_date: d }));

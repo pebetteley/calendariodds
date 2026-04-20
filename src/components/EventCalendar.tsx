@@ -53,8 +53,16 @@ export function EventCalendar({ currentUser }: EventCalendarProps) {
   const handleClick = (date: Date) => {
     if (!isWeekend(date)) return;
     const block = getWeekendBlock(date);
-    const blockIsUnavailable = block.some((d) => myUnavailable.has(d));
-    toggleBlock.mutate({ name: currentUser, dates: block, isUnavailable: blockIsUnavailable });
+    // Block is considered "unavailable" only if ALL dates in the block are marked
+    const blockIsUnavailable = block.every((d) => myUnavailable.has(d));
+    if (blockIsUnavailable) {
+      // Remove all dates in the block
+      toggleBlock.mutate({ name: currentUser, dates: block, isUnavailable: true });
+    } else {
+      // Only insert dates not already marked
+      const datesToAdd = block.filter((d) => !myUnavailable.has(d));
+      toggleBlock.mutate({ name: currentUser, dates: datesToAdd, isUnavailable: false });
+    }
   };
 
   const unavailableCount = (dateStr: string) =>
