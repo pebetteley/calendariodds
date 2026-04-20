@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useEventResponses, useDeleteUserResponses, useToggleDate } from "@/hooks/useEventResponses";
+import { useReactions, useDeleteReaction } from "@/hooks/useReactions";
 import { useSiteSettings, useUpdateSiteSettings, getDateRange } from "@/hooks/useSiteSettings";
 import { useExpectedAttendees, useAddExpectedAttendee, useRemoveExpectedAttendee } from "@/hooks/useExpectedAttendees";
 import { format, eachDayOfInterval, getDay, addDays } from "date-fns";
@@ -34,6 +35,8 @@ export function AdminPanel() {
   const updateSettings = useUpdateSiteSettings();
   const deleteUser = useDeleteUserResponses();
   const toggleDate = useToggleDate();
+  const { data: reactions = [] } = useReactions();
+  const deleteReaction = useDeleteReaction();
   const { data: expectedAttendees = [] } = useExpectedAttendees();
   const addAttendee = useAddExpectedAttendee();
   const removeAttendee = useRemoveExpectedAttendee();
@@ -67,12 +70,26 @@ export function AdminPanel() {
     return getFridays(start, end);
   }, [settings]);
 
-  const people = useMemo(() => [...new Set(responses.map((r) => r.person_name))].filter((n) => n !== "admin123").sort(), [responses]);
+  const people = useMemo(() => {
+    const fromResponses = responses.map((r) => r.person_name);
+    const fromReactions = reactions.map((r) => r.person_name);
+    return [...new Set([...fromResponses, ...fromReactions])].filter((n) => n !== "admin123").sort();
+  }, [responses, reactions]);
   const unavailableSet = useMemo(() => new Set(responses.map((r) => `${r.person_name}|${r.unavailable_date}`)), [responses]);
 
   const isDateUnavailable = selectedUser && selectedDate ? unavailableSet.has(`${selectedUser}|${selectedDate}`) : false;
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - 2 + i);
+
+  const handleDeleteUser = (name: string) => {
+    deleteUser.mutate(name);
+    // Also delete all reactions from this user
+    reactions.filter((r) => r.person_name === name).forEach((r) => {
+      deleteReaction.mutate({ weekendKey: r.weekend_key, personName: name });
+    });
+    toast.success(`Respuestas de "${name}" eliminadas`);
+    setConfirmDelete(null);
+  };
 
   const handleSaveSettings = () => {
     const startKey = startYear * 12 + startMonth;
@@ -292,7 +309,7 @@ export function AdminPanel() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmDelete && deleteUser.mutate(confirmDelete, { onSuccess: () => { toast.success("Respuestas eliminadas"); setConfirmDelete(null); } })} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => confirmDelete && handleDeleteUser(confirmDelete)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               <Trash2 className="mr-1.5 h-4 w-4" /> Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

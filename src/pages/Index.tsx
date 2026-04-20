@@ -112,7 +112,7 @@ export default function Index() {
 
         {/* Confirmed banner */}
         {settings.confirmed_weekend && (
-          <ConfirmedBanner weekendKey={settings.confirmed_weekend} isAdmin={isAdmin} />
+          <ConfirmedBanner weekendKey={settings.confirmed_weekend} isAdmin={isAdmin} currentUser={displayName} />
         )}
 
         {/* Participation progress */}
