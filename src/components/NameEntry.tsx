@@ -23,6 +23,7 @@ export function NameEntry({ onSubmit }: NameEntryProps) {
   const [name, setName] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [checking, setChecking] = useState(false);
+  const { data: settings } = useSiteSettings();
 
   const handleSubmit = async () => {
     const trimmed = name.trim();
