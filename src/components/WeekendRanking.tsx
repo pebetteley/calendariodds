@@ -3,7 +3,7 @@ import { useEventResponses } from "@/hooks/useEventResponses";
 import { useSiteSettings, getDateRange } from "@/hooks/useSiteSettings";
 import { format, eachDayOfInterval, getDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { Trophy, Crown, Medal } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function isWeekend(date: Date) {
@@ -11,12 +11,7 @@ function isWeekend(date: Date) {
   return day === 5 || day === 6 || day === 0;
 }
 
-interface WeekendGroup {
-  friday: Date;
-  sunday: Date;
-  dates: Date[];
-  label: string;
-}
+interface WeekendGroup { friday: Date; sunday: Date; dates: Date[]; label: string; }
 
 function makeGroup(dates: Date[]): WeekendGroup {
   const first = dates[0];
@@ -31,16 +26,12 @@ function getWeekendGroups(start: Date, end: Date): WeekendGroup[] {
   const groups: WeekendGroup[] = [];
   let current: Date[] = [];
   for (const d of weekendDays) {
-    if (current.length === 0) {
-      current.push(d);
-    } else {
+    if (current.length === 0) { current.push(d); }
+    else {
       const last = current[current.length - 1];
       const diff = (d.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
       if (diff <= 1) current.push(d);
-      else {
-        groups.push(makeGroup(current));
-        current = [d];
-      }
+      else { groups.push(makeGroup(current)); current = [d]; }
     }
   }
   if (current.length > 0) groups.push(makeGroup(current));
@@ -63,79 +54,72 @@ export function WeekendRanking() {
 
   const ranked = useMemo(() => {
     if (people.length === 0) return [];
-    const unavailableSet = new Set(
-      responses.map((r) => `${r.person_name}|${r.unavailable_date}`)
-    );
-    return weekendGroups
-      .map((group) => {
-        let totalUnavailable = 0;
-        for (const date of group.dates) {
-          const dateStr = format(date, "yyyy-MM-dd");
-          for (const person of people) {
-            if (unavailableSet.has(`${person}|${dateStr}`)) totalUnavailable++;
-          }
+    const unavailableSet = new Set(responses.map((r) => `${r.person_name}|${r.unavailable_date}`));
+    return weekendGroups.map((group) => {
+      let totalUnavailable = 0;
+      for (const date of group.dates) {
+        const dateStr = format(date, "yyyy-MM-dd");
+        for (const person of people) {
+          if (unavailableSet.has(`${person}|${dateStr}`)) totalUnavailable++;
         }
-        const maxPossible = people.length * group.dates.length;
-        const available = maxPossible - totalUnavailable;
-        const pct = maxPossible > 0 ? Math.round((available / maxPossible) * 100) : 0;
-        return { ...group, available, maxPossible, pct, totalUnavailable };
-      })
-      .sort((a, b) => b.pct - a.pct || a.friday.getTime() - b.friday.getTime());
+      }
+      const maxPossible = people.length * group.dates.length;
+      const available = maxPossible - totalUnavailable;
+      const pct = maxPossible > 0 ? Math.round((available / maxPossible) * 100) : 0;
+      return { ...group, available, maxPossible, pct, totalUnavailable };
+    }).sort((a, b) => b.pct - a.pct || a.friday.getTime() - b.friday.getTime());
   }, [responses, people, weekendGroups]);
 
   if (people.length === 0) return null;
 
-  const topPct = ranked[0]?.pct ?? 0;
+  const medals = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Trophy className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">Ranking de Mejores Fines de Semana</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Mejores fines de semana</h2>
       </div>
-      <div className="grid gap-2">
-        {ranked.map((item, idx) => (
-          <div
-            key={item.label}
-            className={cn(
-              "flex items-center gap-3 rounded-xl border p-3 transition-all",
-              item.pct === topPct && "border-primary/40 bg-primary/5 shadow-sm",
-            )}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
-              {idx === 0 ? (
-                <Crown className="h-4 w-4 text-primary" />
-              ) : idx === 1 ? (
-                <Medal className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <span className="text-muted-foreground">{idx + 1}</span>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {ranked.map((item, idx) => {
+          const isTop = idx === 0;
+          const barColor = item.pct >= 70 ? "bg-emerald-500" : item.pct >= 40 ? "bg-amber-500" : "bg-red-500";
+          const textColor = item.pct >= 70 ? "text-emerald-600 dark:text-emerald-400" : item.pct >= 40 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
+
+          return (
+            <div
+              key={item.label}
+              className={cn(
+                "glass rounded-2xl p-4 transition-all animate-fade-up",
+                isTop && "ring-2 ring-primary/30 shadow-lg shadow-primary/10",
               )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-medium capitalize">{item.label}</span>
-                <span className={cn(
-                  "shrink-0 text-sm font-bold",
-                  item.pct >= 80 ? "text-accent" : item.pct >= 50 ? "text-primary" : "text-destructive"
-                )}>
-                  {item.pct}%
-                </span>
+              style={{ animationDelay: `${idx * 0.04}s` }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{medals[idx] ?? `#${idx + 1}`}</span>
+                    <span className="text-sm font-semibold capitalize">{item.label}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {people.length - [...new Set(item.dates.flatMap(d => {
+                      const dateStr = format(d, "yyyy-MM-dd");
+                      return responses.filter(r => r.unavailable_date === dateStr && r.person_name !== "admin123").map(r => r.person_name);
+                    }))].length} de {people.length} pueden
+                  </p>
+                </div>
+                <span className={cn("text-xl font-bold font-mono", textColor)}>{item.pct}%</span>
               </div>
-              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    item.pct >= 80 ? "bg-accent" : item.pct >= 50 ? "bg-primary" : "bg-destructive/60"
-                  )}
+                  className={cn("h-full rounded-full transition-all duration-700", barColor)}
                   style={{ width: `${item.pct}%` }}
                 />
               </div>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {item.available}/{item.maxPossible} disponibilidades
-              </p>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
