@@ -35,6 +35,42 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          description: string
+          emoji: string
+          end_month: number
+          end_year: number
+          id: boolean
+          start_month: number
+          start_year: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          description?: string
+          emoji?: string
+          end_month?: number
+          end_year?: number
+          id?: boolean
+          start_month?: number
+          start_year?: number
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          description?: string
+          emoji?: string
+          end_month?: number
+          end_year?: number
+          id?: boolean
+          start_month?: number
+          start_year?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -29,6 +29,8 @@
     --weekend-available: 160 40% 92%;
     --weekend-unavailable: 0 72% 93%;
     --weekend-hover: 24 80% 95%;
+    --weekend-block-border: 160 40% 60%;
+    --weekend-block-border-unavailable: 0 72% 65%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;

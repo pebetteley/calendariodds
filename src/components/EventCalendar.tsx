@@ -1,14 +1,22 @@
 import { useMemo } from "react";
 import { useEventResponses, useToggleWeekendBlock } from "@/hooks/useEventResponses";
-import { format, eachDayOfInterval, getDay, startOfMonth, endOfMonth, addMonths, addDays, subDays } from "date-fns";
+import { useSiteSettings, getDateRange } from "@/hooks/useSiteSettings";
+import {
+  format,
+  eachDayOfInterval,
+  getDay,
+  startOfMonth,
+  endOfMonth,
+  eachMonthOfInterval,
+  addDays,
+  subDays,
+} from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 interface EventCalendarProps {
   currentUser: string;
 }
-
-const MONTHS = Array.from({ length: 6 }, (_, i) => addMonths(new Date(2026, 5, 1), i));
 
 function isWeekend(date: Date) {
   const day = getDay(date);
@@ -29,7 +37,13 @@ function getWeekendBlock(date: Date): string[] {
 
 export function EventCalendar({ currentUser }: EventCalendarProps) {
   const { data: responses = [] } = useEventResponses();
+  const { data: settings } = useSiteSettings();
   const toggleBlock = useToggleWeekendBlock();
+
+  const months = useMemo(() => {
+    const { start, end } = getDateRange(settings);
+    return eachMonthOfInterval({ start, end });
+  }, [settings]);
 
   const myUnavailable = useMemo(
     () => new Set(responses.filter((r) => r.person_name === currentUser).map((r) => r.unavailable_date)),
@@ -39,7 +53,6 @@ export function EventCalendar({ currentUser }: EventCalendarProps) {
   const handleClick = (date: Date) => {
     if (!isWeekend(date)) return;
     const block = getWeekendBlock(date);
-    // If ANY day in block is marked, we consider the block as unavailable → remove all
     const blockIsUnavailable = block.some((d) => myUnavailable.has(d));
     toggleBlock.mutate({ name: currentUser, dates: block, isUnavailable: blockIsUnavailable });
   };
@@ -51,7 +64,7 @@ export function EventCalendar({ currentUser }: EventCalendarProps) {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {MONTHS.map((month) => {
+      {months.map((month) => {
         const start = startOfMonth(month);
         const end = endOfMonth(month);
         const days = eachDayOfInterval({ start, end });
@@ -72,8 +85,25 @@ export function EventCalendar({ currentUser }: EventCalendarProps) {
               {days.map((date) => {
                 const dateStr = format(date, "yyyy-MM-dd");
                 const weekend = isWeekend(date);
+                const day = getDay(date);
                 const isMyUnavailable = myUnavailable.has(dateStr);
                 const count = weekend ? unavailableCount(dateStr) : 0;
+
+                // Block grouping border classes (Fri=left, Sat=middle, Sun=right)
+                const isFri = day === 5;
+                const isSat = day === 6;
+                const isSun = day === 0;
+                const blockBorder = weekend
+                  ? cn(
+                      "border-y-2",
+                      isFri && "border-l-2 rounded-l-md -mr-1",
+                      isSat && "-mx-1 rounded-none",
+                      isSun && "border-r-2 rounded-r-md -ml-1",
+                      isMyUnavailable
+                        ? "border-[hsl(var(--weekend-block-border-unavailable))]"
+                        : "border-[hsl(var(--weekend-block-border))]"
+                    )
+                  : "";
 
                 return (
                   <button
@@ -81,15 +111,16 @@ export function EventCalendar({ currentUser }: EventCalendarProps) {
                     onClick={() => handleClick(date)}
                     disabled={!weekend || toggleBlock.isPending}
                     className={cn(
-                      "relative flex h-9 w-full items-center justify-center rounded-md text-xs transition-all",
-                      !weekend && "text-muted-foreground/40 cursor-default",
+                      "relative flex h-9 w-full items-center justify-center text-xs transition-all",
+                      !weekend && "rounded-md text-muted-foreground/40 cursor-default",
                       weekend && !isMyUnavailable && "bg-weekend-available hover:bg-weekend-hover cursor-pointer font-medium",
                       weekend && isMyUnavailable && "bg-destructive text-destructive-foreground cursor-pointer font-bold",
+                      blockBorder,
                     )}
                   >
                     {date.getDate()}
                     {weekend && count > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                      <span className="absolute -right-0.5 -top-0.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
                         {count}
                       </span>
                     )}

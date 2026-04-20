@@ -1,12 +1,10 @@
 import { useMemo } from "react";
 import { useEventResponses } from "@/hooks/useEventResponses";
-import { format, eachDayOfInterval, getDay, nextFriday, nextSunday, addDays } from "date-fns";
+import { useSiteSettings, getDateRange } from "@/hooks/useSiteSettings";
+import { format, eachDayOfInterval, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Trophy, Crown, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const START = new Date(2026, 5, 1);
-const END = new Date(2026, 10, 30);
 
 function isWeekend(date: Date) {
   const day = getDay(date);
@@ -20,22 +18,26 @@ interface WeekendGroup {
   label: string;
 }
 
-function getWeekendGroups(): WeekendGroup[] {
-  const allDays = eachDayOfInterval({ start: START, end: END });
-  const weekendDays = allDays.filter(isWeekend);
+function makeGroup(dates: Date[]): WeekendGroup {
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const label = `${format(first, "d", { locale: es })}–${format(last, "d MMM", { locale: es })}`;
+  return { friday: first, sunday: last, dates, label };
+}
 
+function getWeekendGroups(start: Date, end: Date): WeekendGroup[] {
+  const allDays = eachDayOfInterval({ start, end });
+  const weekendDays = allDays.filter(isWeekend);
   const groups: WeekendGroup[] = [];
   let current: Date[] = [];
-
   for (const d of weekendDays) {
     if (current.length === 0) {
       current.push(d);
     } else {
       const last = current[current.length - 1];
       const diff = (d.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
-      if (diff <= 1) {
-        current.push(d);
-      } else {
+      if (diff <= 1) current.push(d);
+      else {
         groups.push(makeGroup(current));
         current = [d];
       }
@@ -45,17 +47,14 @@ function getWeekendGroups(): WeekendGroup[] {
   return groups;
 }
 
-function makeGroup(dates: Date[]): WeekendGroup {
-  const first = dates[0];
-  const last = dates[dates.length - 1];
-  const label = `${format(first, "d", { locale: es })}–${format(last, "d MMM", { locale: es })}`;
-  return { friday: first, sunday: last, dates, label };
-}
-
-const weekendGroups = getWeekendGroups();
-
 export function WeekendRanking() {
   const { data: responses = [] } = useEventResponses();
+  const { data: settings } = useSiteSettings();
+
+  const weekendGroups = useMemo(() => {
+    const { start, end } = getDateRange(settings);
+    return getWeekendGroups(start, end);
+  }, [settings]);
 
   const people = useMemo(
     () => [...new Set(responses.map((r) => r.person_name))],
@@ -64,11 +63,9 @@ export function WeekendRanking() {
 
   const ranked = useMemo(() => {
     if (people.length === 0) return [];
-
     const unavailableSet = new Set(
       responses.map((r) => `${r.person_name}|${r.unavailable_date}`)
     );
-
     return weekendGroups
       .map((group) => {
         let totalUnavailable = 0;
@@ -84,7 +81,7 @@ export function WeekendRanking() {
         return { ...group, available, maxPossible, pct, totalUnavailable };
       })
       .sort((a, b) => b.pct - a.pct || a.friday.getTime() - b.friday.getTime());
-  }, [responses, people]);
+  }, [responses, people, weekendGroups]);
 
   if (people.length === 0) return null;
 
@@ -102,8 +99,7 @@ export function WeekendRanking() {
             key={item.label}
             className={cn(
               "flex items-center gap-3 rounded-xl border p-3 transition-all",
-              idx === 0 && item.pct === topPct && "border-primary/40 bg-primary/5 shadow-sm",
-              idx > 0 && item.pct === topPct && "border-primary/40 bg-primary/5 shadow-sm",
+              item.pct === topPct && "border-primary/40 bg-primary/5 shadow-sm",
             )}
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">

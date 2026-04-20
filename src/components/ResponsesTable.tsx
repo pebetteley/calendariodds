@@ -1,22 +1,25 @@
 import { useMemo } from "react";
 import { useEventResponses } from "@/hooks/useEventResponses";
-import { format, eachDayOfInterval, getDay, addMonths } from "date-fns";
+import { useSiteSettings, getDateRange } from "@/hooks/useSiteSettings";
+import { format, eachDayOfInterval, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Download, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const START = new Date(2026, 5, 1);
-const END = new Date(2026, 10, 30);
 
 function isWeekend(date: Date) {
   const day = getDay(date);
   return day === 5 || day === 6 || day === 0;
 }
 
-const weekendDates = eachDayOfInterval({ start: START, end: END }).filter(isWeekend);
-
 export function ResponsesTable() {
   const { data: responses = [] } = useEventResponses();
+  const { data: settings } = useSiteSettings();
+
+  const weekendDates = useMemo(() => {
+    const { start, end } = getDateRange(settings);
+    return eachDayOfInterval({ start, end }).filter(isWeekend);
+  }, [settings]);
+
 
   const people = useMemo(
     () => [...new Set(responses.map((r) => r.person_name))].sort(),
