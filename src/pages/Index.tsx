@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NameEntry } from "@/components/NameEntry";
 import { EventCalendar } from "@/components/EventCalendar";
 import { ResponsesTable } from "@/components/ResponsesTable";
 import { WeekendRanking } from "@/components/WeekendRanking";
+import { WeekendReactions } from "@/components/WeekendReactions";
 import { AdminPanel } from "@/components/AdminPanel";
-import { LogOut, Shield, Moon, Sun, Share2, Check } from "lucide-react";
+import { ConfirmedBanner } from "@/components/ConfirmedBanner";
+import { ParticipationProgress } from "@/components/ParticipationProgress";
+import { ConfettiEffect } from "@/components/ConfettiEffect";
+import { LogOut, Shield, Moon, Sun, Share2, Check, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSiteSettings, getDateRange } from "@/hooks/useSiteSettings";
 import { format } from "date-fns";
@@ -16,19 +20,12 @@ function useDarkMode() {
     if (saved) return saved === "dark";
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
-
+  useEffect(() => { document.documentElement.classList.toggle("dark", dark); }, [dark]);
   const toggle = () => {
     const next = !dark;
     setDark(next);
     localStorage.setItem("theme", next ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", next);
   };
-
-  // Apply on mount
-  useState(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  });
-
   return { dark, toggle };
 }
 
@@ -37,17 +34,20 @@ export default function Index() {
   const { data: settings } = useSiteSettings();
   const { dark, toggle: toggleDark } = useDarkMode();
   const [copied, setCopied] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [prevConfirmed, setPrevConfirmed] = useState<string | null>(settings.confirmed_weekend);
 
-  const handleSubmit = (n: string) => {
-    localStorage.setItem("event_planner_name", n);
-    setName(n);
-  };
+  // Trigger confetti when confirmed_weekend changes
+  useEffect(() => {
+    if (settings.confirmed_weekend && settings.confirmed_weekend !== prevConfirmed) {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3100);
+    }
+    setPrevConfirmed(settings.confirmed_weekend);
+  }, [settings.confirmed_weekend]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("event_planner_name");
-    setName(null);
-  };
-
+  const handleSubmit = (n: string) => { localStorage.setItem("event_planner_name", n); setName(n); };
+  const handleLogout = () => { localStorage.removeItem("event_planner_name"); setName(null); };
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setCopied(true);
@@ -59,13 +59,13 @@ export default function Index() {
 
   const isAdmin = name === "admin123";
   const displayName = isAdmin ? "Admin" : name;
-
   const { start, end } = getDateRange(settings);
   const rangeLabel = `${format(start, "MMM", { locale: es })}–${format(end, "MMM yyyy", { locale: es })}`;
 
   return (
     <div className="mesh-bg min-h-screen">
-      {/* Decorative blobs */}
+      <ConfettiEffect trigger={showConfetti} />
+
       <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
         <div className="absolute -top-60 -right-60 h-[600px] w-[600px] rounded-full bg-primary/8 blur-3xl" />
         <div className="absolute top-1/2 -left-40 h-80 w-80 rounded-full bg-accent/8 blur-3xl" />
@@ -79,25 +79,17 @@ export default function Index() {
               {settings.emoji}
             </div>
             <span className="font-bold tracking-tight">{settings.title}</span>
-            <span className="hidden rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground sm:block">
-              {rangeLabel}
-            </span>
+            <span className="hidden rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground sm:block">{rangeLabel}</span>
           </div>
-
           <div className="flex items-center gap-2">
-            {/* Share button */}
             <Button variant="ghost" size="sm" onClick={handleShare} className="gap-1.5 text-xs">
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Share2 className="h-3.5 w-3.5" />}
               <span className="hidden sm:block">{copied ? "¡Copiado!" : "Compartir"}</span>
             </Button>
-
-            {/* Dark mode toggle */}
             <Button variant="ghost" size="icon" onClick={toggleDark} className="h-8 w-8">
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-
             <div className="h-4 w-px bg-border" />
-
             {isAdmin && <Shield className="h-4 w-4 text-primary" />}
             <span className="hidden text-sm text-muted-foreground sm:block">
               <strong className="text-foreground">{displayName}</strong>
@@ -114,20 +106,24 @@ export default function Index() {
         {/* Hero */}
         <div className="animate-fade-up">
           <p className="text-sm font-medium text-primary mb-1">Encuesta de disponibilidad</p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {settings.title}
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{settings.title}</h1>
           <p className="mt-2 text-muted-foreground max-w-lg">{settings.description}</p>
         </div>
 
-        {isAdmin && (
-          <div className="animate-fade-up delay-1">
-            <AdminPanel />
-          </div>
+        {/* Confirmed banner */}
+        {settings.confirmed_weekend && (
+          <ConfirmedBanner weekendKey={settings.confirmed_weekend} isAdmin={isAdmin} />
         )}
 
+        {/* Participation progress */}
+        <ParticipationProgress />
+
+        {isAdmin && <div className="animate-fade-up delay-1"><AdminPanel /></div>}
+
         <section className="animate-fade-up delay-2">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Calendario</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" /> Calendario
+          </h2>
           <EventCalendar currentUser={name} />
         </section>
 
@@ -136,6 +132,10 @@ export default function Index() {
         </section>
 
         <section className="animate-fade-up delay-4">
+          <WeekendReactions currentUser={name} />
+        </section>
+
+        <section className="animate-fade-up delay-5">
           <ResponsesTable />
         </section>
       </main>
