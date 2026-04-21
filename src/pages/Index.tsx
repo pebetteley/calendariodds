@@ -113,31 +113,35 @@ export default function Index() {
 
         {/* Confirmed banner */}
         {settings.confirmed_weekend && (
-          <ConfirmedBanner weekendKey={settings.confirmed_weekend} isAdmin={isAdmin} currentUser={displayName} />
+          <ErrorBoundary fallback={<div className="p-4 text-red-500 rounded-xl border border-red-300">Error en Banner</div>}>
+            <ConfirmedBanner weekendKey={settings.confirmed_weekend} isAdmin={isAdmin} currentUser={displayName} />
+          </ErrorBoundary>
         )}
 
         {/* Participation progress */}
-        <ParticipationProgress />
+        <ErrorBoundary fallback={<div className="p-4 text-red-500 rounded-xl border border-red-300">Error en Progreso</div>}>
+          <ParticipationProgress />
+        </ErrorBoundary>
 
-        {isAdmin && <div className="animate-fade-up delay-1"><ErrorBoundary><AdminPanel /></ErrorBoundary></div>}
+        {isAdmin && <div className="animate-fade-up delay-1"><ErrorBoundary fallback={<div className="p-4 text-red-500 rounded-xl border border-red-300">Error en AdminPanel</div>}><AdminPanel /></ErrorBoundary></div>}
 
         <section className="animate-fade-up delay-2">
           <h2 className="mb-4 text-lg font-semibold tracking-tight flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" /> Calendario
           </h2>
-          <EventCalendar currentUser={name} />
+          <ErrorBoundary fallback={<div className="p-4 text-red-500 rounded-xl border border-red-300">Error en Calendario</div>}><EventCalendar currentUser={name} /></ErrorBoundary>
         </section>
 
         <section className="animate-fade-up delay-3">
-          <WeekendRanking />
+          <ErrorBoundary fallback={<div className="p-4 text-red-500 rounded-xl border border-red-300">Error en Ranking</div>}><WeekendRanking /></ErrorBoundary>
         </section>
 
         <section className="animate-fade-up delay-4">
-          <WeekendReactions currentUser={name} />
+          <ErrorBoundary fallback={<div className="p-4 text-red-500 rounded-xl border border-red-300">Error en Reacciones</div>}><WeekendReactions currentUser={name} /></ErrorBoundary>
         </section>
 
         <section className="animate-fade-up delay-5">
-          <ResponsesTable />
+          <ErrorBoundary fallback={<div className="p-4 text-red-500 rounded-xl border border-red-300">Error en Tabla</div>}><ResponsesTable /></ErrorBoundary>
         </section>
       </main>
 
